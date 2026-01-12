@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "flash-attn-triton"
+version = "0.1.0"
+description = "FlashAttention implemented in Triton"
+requires-python = ">=3.9"
+dependencies = ["torch>=2.1", "triton>=2.1"]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -18,14 +18,32 @@ def flash_attn_fwd(
     Q: torch.Tensor,
     K: torch.Tensor,
     V: torch.Tensor,
-    return_lse=False,
+    return_lse: bool = False,
     *,
     BLOCK_M: int = 128,
     BLOCK_N: int = 128,
     BLOCK_D: int = 128,
     num_warps: int = 4,
     num_stages: int = 1,
-):
+) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
+    """
+    FlashAttention forward pass.
+
+    Args:
+        Q: Query tensor of shape [B, H, M, D]
+        K: Key tensor of shape [B, H, N, D]
+        V: Value tensor of shape [B, H, N, D]
+        return_lse: Whether to return log-sum-exp values
+        BLOCK_M: Triton block size for M dimension
+        BLOCK_N: Triton block size for N dimension
+        BLOCK_D: Triton block size for D dimension
+        num_warps: Number of warps per Triton thread block
+        num_stages: Number of Triton pipeline stages
+
+    Returns:
+        If return_lse=False: Output tensor of shape [B, H, M, D]
+        If return_lse=True: Tuple of (output, LSE) where LSE is [B, H, M]
+    """
     assert Q.ndim == 4 and K.ndim == 4 and V.ndim == 4
     assert Q.is_cuda and K.is_cuda and V.is_cuda
     assert Q.dtype in (torch.float16, torch.bfloat16)
@@ -222,7 +240,20 @@ def launch_flash_attn_bwd_dQ(
 
 
 
-def attention_ref(Q, K, V):
+def attention_ref(Q: torch.Tensor, K: torch.Tensor, V: torch.Tensor) -> torch.Tensor:
+    """
+    Reference implementation of attention for testing.
+
+    This is a standard PyTorch implementation used for correctness verification.
+
+    Args:
+        Q: Query tensor of shape [B, H, M, D]
+        K: Key tensor of shape [B, H, N, D]
+        V: Value tensor of shape [B, H, N, D]
+
+    Returns:
+        Attention output of shape [B, H, M, D]
+    """
     B, H, M, D = Q.shape
     _, _, N, _ = K.shape
     out = torch.empty_like(Q)
@@ -394,13 +425,32 @@ def scaled_dot_product_attention(
     BLOCK_D: int = 128,
     num_warps: int = 4,
     num_stages: int = 1,
-):
+) -> torch.Tensor:
     """
-    PyTorch-like SDPA API (subset).
-    Expected shapes:
-      q: [B, H, M, D]
-      k: [B, H, N, D]
-      v: [B, H, N, D]
+    Scaled Dot Product Attention using FlashAttention in Triton.
+
+    This function is compatible with torch.nn.functional.scaled_dot_product_attention
+    but uses Triton kernels for GPU acceleration.
+
+    Args:
+        q: Query tensor of shape [B, H, M, D]
+        k: Key tensor of shape [B, H, N, D]
+        v: Value tensor of shape [B, H, N, D]
+        attn_mask: Not supported (reserved for API compatibility)
+        dropout_p: Dropout probability (not implemented)
+        is_causal: Whether to use causal masking
+        scale: Attention scale factor (defaults to 1/sqrt(D))
+        BLOCK_M: Triton block size for M dimension
+        BLOCK_N: Triton block size for N dimension
+        BLOCK_D: Triton block size for D dimension
+        num_warps: Number of warps per Triton thread block
+        num_stages: Number of Triton pipeline stages
+
+    Returns:
+        Attention output tensor of shape [B, H, M, D]
+
+    Raises:
+        AssertionError: If dtype is not float16 or bfloat16
     """
     Fn = _make_flash_attn_fn(
         BLOCK_M=BLOCK_M,
@@ -412,8 +462,24 @@ def scaled_dot_product_attention(
     # apply 只能位置参数
     return Fn.apply(q, k, v, attn_mask, dropout_p, is_causal, scale)
 
-def flash_attn(Q, K, V, **kwargs):
+def flash_attn(
+    Q: torch.Tensor,
+    K: torch.Tensor,
+    V: torch.Tensor,
+    **kwargs,
+) -> torch.Tensor:
     """
-    Public API: FlashAttention forward.
+    FlashAttention forward pass.
+
+    This is a convenience wrapper around flash_attn_fwd.
+
+    Args:
+        Q: Query tensor of shape [B, H, M, D]
+        K: Key tensor of shape [B, H, N, D]
+        V: Value tensor of shape [B, H, N, D]
+        **kwargs: Additional arguments passed to flash_attn_fwd
+
+    Returns:
+        Attention output of shape [B, H, M, D]
     """
     return flash_attn_fwd(Q, K, V, **kwargs)

@@ -85,11 +85,12 @@ def flash_attn_bwd_dV_kernel(
             other=-float("inf"),
         ).to(tl.float32)
         
-        scores = tl.dot(q, tl.trans(k)).to(tl.float32) * scale
+        scores = tl.dot(q.to(tl.float32), tl.trans(k).to(tl.float32)) * scale
         scores = tl.where(n_mask[None, :], scores, -float("inf"))
         p = tl.exp(scores - lse[:, None])
-        p = p.to(dO.dtype)  
-        dV += tl.dot(tl.trans(p), dO).to(tl.float32)
+        # Cast p to dO.dtype before the dot (matching reference), then accumulate as float32
+        dv_part = tl.dot(tl.trans(p.to(dO.dtype)), dO)
+        dV += dv_part.to(tl.float32)
         
     dv_ptrs = dV_ptr + \
         b * stride_dvb + \
@@ -182,7 +183,6 @@ def flash_attn_bwd_dK_kernel(
         ).to(tl.float32)
         
         scores = tl.dot(Q, tl.trans(K.to(tl.float32))) * scale
-        
         scores = tl.where(n_mask[None, :], scores, -float("inf"))
         P = tl.exp(scores - lse[:, None])
         dP = tl.dot(dO, tl.trans(V.to(tl.float32)))

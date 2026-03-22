@@ -46,7 +46,7 @@ def flash_attn_fwd(
     """
     assert Q.ndim == 4 and K.ndim == 4 and V.ndim == 4
     assert Q.is_cuda and K.is_cuda and V.is_cuda
-    assert Q.dtype in (torch.float16, torch.bfloat16)
+    assert Q.dtype in (torch.float32, torch.float16, torch.bfloat16)
     
     B, H, M, D = Q.shape
     _, _, N, _ = K.shape

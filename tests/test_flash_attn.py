@@ -8,11 +8,11 @@ from flash_attn_triton.ops import attention_ref
 class TestFlashAttentionCorrectness:
     """Test forward and backward pass correctness."""
 
-    def test_float16_forward(self):
-        """Verify float16 forward pass."""
+    def test_float32_forward(self):
+        """Verify float32 forward pass."""
         B, H, M, N, D = 2, 4, 128, 128, 64
         device = "cuda"
-        dtype = torch.float16
+        dtype = torch.float32
 
         torch.manual_seed(42)
         q = torch.randn(B, H, M, D, device=device, dtype=dtype)
@@ -36,7 +36,7 @@ class TestFlashAttentionSmoke:
         """Original smoke test - verify backward pass produces finite gradients."""
         B, H, M, N, D = 2, 4, 128, 128, 64
         device = "cuda"
-        dtype = torch.float16
+        dtype = torch.float32
 
         q = torch.randn(B, H, M, D, device=device, dtype=dtype, requires_grad=True)
         k = torch.randn(B, H, N, D, device=device, dtype=dtype, requires_grad=True)

@@ -20,9 +20,9 @@ def flash_attn_fwd(
     V: torch.Tensor,
     return_lse: bool = False,
     *,
-    BLOCK_M: int = 128,
-    BLOCK_N: int = 128,
-    BLOCK_D: int = 128,
+    BLOCK_M: int = 64,
+    BLOCK_N: int = 64,
+    BLOCK_D: int = 64,
     num_warps: int = 4,
     num_stages: int = 1,
 ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
@@ -46,7 +46,7 @@ def flash_attn_fwd(
     """
     assert Q.ndim == 4 and K.ndim == 4 and V.ndim == 4
     assert Q.is_cuda and K.is_cuda and V.is_cuda
-    assert Q.dtype in (torch.float32, torch.float16, torch.bfloat16)
+    assert Q.dtype == torch.float32, "Only float32 is supported"
     
     B, H, M, D = Q.shape
     _, _, N, _ = K.shape
@@ -91,8 +91,8 @@ def launch_flash_attn_bwd_delta(
     dO: torch.Tensor,
     Delta: torch.Tensor,
     *,
-    BLOCK_M=128,
-    BLOCK_D=128,
+    BLOCK_M=64,
+    BLOCK_D=64,
     num_warps=4,
     num_stages=1,
 ):
@@ -122,9 +122,9 @@ def launch_flash_attn_bwd_dV(
     dV: torch.Tensor,
     LSE: torch.Tensor,
     *,
-    BLOCK_M=128,
-    BLOCK_N=128,
-    BLOCK_D=128,
+    BLOCK_M=64,
+    BLOCK_N=64,
+    BLOCK_D=64,
     num_warps=4,
     num_stages=1,
 ):
@@ -163,9 +163,9 @@ def launch_flash_attn_bwd_dK(
     LSE: torch.Tensor,
     Delta: torch.Tensor,
     *,
-    BLOCK_M=128,
-    BLOCK_N=128,
-    BLOCK_D=128,
+    BLOCK_M=64,
+    BLOCK_N=64,
+    BLOCK_D=64,
     num_warps=4,
     num_stages=1,
 ):
@@ -205,9 +205,9 @@ def launch_flash_attn_bwd_dQ(
     LSE: torch.Tensor,
     Delta: torch.Tensor,
     *,
-    BLOCK_M=128,
-    BLOCK_N=128,
-    BLOCK_D=128,
+    BLOCK_M=64,
+    BLOCK_N=64,
+    BLOCK_D=64,
     num_warps=4,
     num_stages=1,
 ):
@@ -420,9 +420,9 @@ def scaled_dot_product_attention(
     is_causal: bool = False,
     scale: float | None = None,
     *,
-    BLOCK_M: int = 128,
-    BLOCK_N: int = 128,
-    BLOCK_D: int = 128,
+    BLOCK_M: int = 64,
+    BLOCK_N: int = 64,
+    BLOCK_D: int = 64,
     num_warps: int = 4,
     num_stages: int = 1,
 ) -> torch.Tensor:
@@ -450,7 +450,7 @@ def scaled_dot_product_attention(
         Attention output tensor of shape [B, H, M, D]
 
     Raises:
-        AssertionError: If dtype is not float16 or bfloat16
+        AssertionError: If dtype is not float32
     """
     Fn = _make_flash_attn_fn(
         BLOCK_M=BLOCK_M,

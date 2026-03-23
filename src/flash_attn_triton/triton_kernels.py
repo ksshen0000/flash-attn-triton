@@ -44,7 +44,7 @@ def flash_attn_bwd_dV_kernel(
         k_ptrs,
         mask=n_mask[:, None] & d_mask[None, :],
         other=0.0,
-    ).to(tl.float16)
+    ).to(tl.float32)
     
     for m_start in range(0, M_CTX, BLOCK_M):
         m = m_start + offset_m
@@ -60,7 +60,7 @@ def flash_attn_bwd_dV_kernel(
             q_ptrs,
             mask=m_mask[:, None] & d_mask[None, :],
             other=0.0,
-        ).to(tl.float16)
+        ).to(tl.float32)
         
         do_ptrs = dO_ptr + \
             b * stride_dob + \
@@ -72,7 +72,7 @@ def flash_attn_bwd_dV_kernel(
             do_ptrs,
             mask=m_mask[:, None] & d_mask[None, :],
             other=0.0,
-        ).to(tl.float16)
+        ).to(tl.float32)
         
         lse_ptrs = LSE_ptr + \
             b * stride_lseb + \
@@ -139,13 +139,13 @@ def flash_attn_bwd_dK_kernel(
         K_ptr + b*stride_kb+h*stride_kh+off_n[:,None]*stride_kn+off_d[None,:]*stride_kd,
         mask = n_mask[:,None] & d_mask[None, :],
         other= 0.0
-    ).to(tl.float16)
+    ).to(tl.float32)
     
     V = tl.load(
         V_ptr + b*stride_vb+h*stride_vh+off_n[:,None]*stride_vn+off_d[None,:]*stride_vd,
         mask = n_mask[:,None] & d_mask[None, :],
         other= 0.0  
-    ).to(tl.float16)
+    ).to(tl.float32)
     
     dK = tl.zeros((BLOCK_N, BLOCK_D), dtype=tl.float32)
     
@@ -369,7 +369,7 @@ def flash_attn_fwd_kernel(
         q_ptrs,
         mask=m_mask[:, None] & d_mask[None, :],
         other=0.0,
-    ).to(tl.float16)
+    ).to(tl.float32)
 
     # ---- online softmax state ----
     m = tl.full((BLOCK_M,), -float("inf"), tl.float32)
@@ -392,7 +392,7 @@ def flash_attn_fwd_kernel(
             k_ptrs,
             mask=col_mask[:, None] & d_mask[None, :],
             other=0.0,
-        ).to(tl.float16)
+        ).to(tl.float32)
 
         # ---- V ----
         v_ptrs = (
@@ -406,7 +406,7 @@ def flash_attn_fwd_kernel(
             v_ptrs,
             mask=col_mask[:, None] & d_mask[None, :],
             other=0.0,
-        ).to(tl.float16)
+        ).to(tl.float32)
 
         # ---- attention ----
         scores = tl.dot(q, tl.trans(k)).to(tl.float32) * scale

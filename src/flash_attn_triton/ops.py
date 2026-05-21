@@ -5,6 +5,15 @@ import torch
 import triton
 import triton.language as tl
 
+# Single source of truth for supported dtypes.
+# Computation always runs in float32 internally; only I/O uses the input dtype.
+# To add a new dtype, append it here — no kernel changes required.
+_SUPPORTED_DTYPES: frozenset = frozenset({
+    torch.float32,
+    torch.float16,
+    torch.bfloat16,
+})
+
 from .triton_kernels import (
     flash_attn_fwd_kernel,
     flash_attn_bwd_delta_kernel,
@@ -46,7 +55,11 @@ def flash_attn_fwd(
     """
     assert Q.ndim == 4 and K.ndim == 4 and V.ndim == 4
     assert Q.is_cuda and K.is_cuda and V.is_cuda
-    assert Q.dtype == torch.float32, "Only float32 is supported"
+    assert Q.dtype in _SUPPORTED_DTYPES, (
+        f"Unsupported dtype {Q.dtype}; expected one of {_SUPPORTED_DTYPES}"
+    )
+    assert K.dtype == Q.dtype and V.dtype == Q.dtype, \
+        "Q, K, V must share the same dtype"
     
     B, H, M, D = Q.shape
     _, _, N, _ = K.shape
